@@ -35,17 +35,18 @@ def gradcheck_naive(f, x):
         # Make sure you call random.setstate(rndstate)
         # before calling f(x) each time. This will make it possible
         # to test cost functions with built in randomness later.
-#         import IPython
-#         IPython.embed()
         
         ### YOUR CODE HERE:
         x_ix = x[ix]
-        random.setstate(rndstate)
+
         x[ix] = x_ix + h
-        f_plush, _ = f(x)
         random.setstate(rndstate)
+        f_plush, _ = f(x)
+
         x[ix] = x_ix - h
+        random.setstate(rndstate)
         f_minush, _ = f(x)
+
         numgrad = (f_plush - f_minush) / (2 * h)
         x[ix] = x_ix
         # raise NotImplementedError

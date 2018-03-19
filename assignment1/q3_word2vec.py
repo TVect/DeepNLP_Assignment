@@ -6,6 +6,7 @@ import random
 from q1_softmax import softmax
 from q2_gradcheck import gradcheck_naive
 from q2_sigmoid import sigmoid, sigmoid_grad
+from dask.array.chunk import keepdims_wrapper
 
 def normalizeRows(x):
     """ Row normalization function
@@ -15,7 +16,9 @@ def normalizeRows(x):
     """
 
     ### YOUR CODE HERE
-    raise NotImplementedError
+    x_square = np.square(x)
+    x = np.sqrt(x_square / x_square.sum(axis=1, keepdims=True))
+    # raise NotImplementedError
     ### END YOUR CODE
 
     return x
@@ -58,7 +61,17 @@ def softmaxCostAndGradient(predicted, target, outputVectors, dataset):
     """
 
     ### YOUR CODE HERE
-    raise NotImplementedError
+    # print("target:", target, "predicted", predicted)
+    y_hat = softmax(np.dot(predicted, outputVectors.T))
+    y_out = np.zeros_like(y_hat)
+    y_out[target] = 1
+    cost = np.sum(-y_out * np.log(y_hat))
+    # cost = -np.log(y_hat)[:, target]
+    
+    gradPred = np.dot(y_hat-y_out, outputVectors)
+    
+    grad = (y_hat - y_out)[:, np.newaxis] * predicted
+    # raise NotImplementedError
     ### END YOUR CODE
 
     return cost, gradPred, grad
@@ -94,9 +107,21 @@ def negSamplingCostAndGradient(predicted, target, outputVectors, dataset,
     # wish to match the autograder and receive points!
     indices = [target]
     indices.extend(getNegativeSamples(target, dataset, K))
-
     ### YOUR CODE HERE
-    raise NotImplementedError
+    cost = -np.log(sigmoid(np.dot(outputVectors[indices[0]], predicted)))
+    cost -= np.sum(np.log(sigmoid(np.dot(-outputVectors[indices[1:]], predicted))))
+    
+    gradPred = (sigmoid(np.dot(outputVectors[indices[0]], predicted)) - 1) * outputVectors[indices[0]]
+    gradPred -= np.dot((sigmoid(np.dot(-outputVectors[indices[1:]], predicted)) - 1)[np.newaxis,:],
+                       outputVectors[indices[1:]])[0]
+
+    grad = np.zeros_like(outputVectors)
+    grad[indices[0]] += (sigmoid(np.dot(outputVectors[indices[0]], predicted)) - 1) * predicted
+    
+    for k in range(1, len(indices)):
+        grad[indices[k]] -= (sigmoid(np.dot(-outputVectors[indices[k]], predicted)) - 1) * predicted
+    
+    # raise NotImplementedError
     ### END YOUR CODE
 
     return cost, gradPred, grad
@@ -131,7 +156,18 @@ def skipgram(currentWord, C, contextWords, tokens, inputVectors, outputVectors,
     gradOut = np.zeros(outputVectors.shape)
 
     ### YOUR CODE HERE
-    raise NotImplementedError
+    # Tips: where gradcheck, we use random.setstate(), so we get same batch sample everytime, 
+    # and we can use centered difference to estimate gradient. 
+    for target_word in contextWords:
+        cur_cost, cur_gradPred, cur_grad = word2vecCostAndGradient(inputVectors[tokens[currentWord]], 
+                                                                   tokens[target_word], 
+                                                                   outputVectors, 
+                                                                   dataset)
+        cost += cur_cost
+        gradIn[tokens[currentWord]] += cur_gradPred
+        gradOut += cur_grad
+
+    # raise NotImplementedError
     ### END YOUR CODE
 
     return cost, gradIn, gradOut
@@ -188,7 +224,6 @@ def word2vec_sgd_wrapper(word2vecModel, tokens, wordVectors, dataset, C,
         cost += c / batchsize / denom
         grad[:N/2, :] += gin / batchsize / denom
         grad[N/2:, :] += gout / batchsize / denom
-
     return cost, grad
 
 
@@ -209,6 +244,7 @@ def test_word2vec():
     np.random.seed(9265)
     dummy_vectors = normalizeRows(np.random.randn(10,3))
     dummy_tokens = dict([("a",0), ("b",1), ("c",2),("d",3),("e",4)])
+    
     print "==== Gradient check for skip-gram ===="
     gradcheck_naive(lambda vec: word2vec_sgd_wrapper(
         skipgram, dummy_tokens, vec, dataset, 5, softmaxCostAndGradient),
