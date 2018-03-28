@@ -1,3 +1,4 @@
+from jsonschema._validators import dependencies
 class PartialParse(object):
     def __init__(self, sentence):
         """Initializes this partial parse.
@@ -21,6 +22,9 @@ class PartialParse(object):
         self.sentence = sentence
 
         ### YOUR CODE HERE
+        self.stack = ["ROOT"]
+        self.buffer = [word for word in self.sentence]
+        self.dependencies = []
         ### END YOUR CODE
 
     def parse_step(self, transition):
@@ -32,6 +36,17 @@ class PartialParse(object):
                         transition.
         """
         ### YOUR CODE HERE
+        if transition == "S":
+            # shift transaction
+            self.stack.append(self.buffer.pop(0))
+        elif transition == "LA":
+            # left-arc transaction
+            self.dependencies.append((self.stack[-1], self.stack[-2]))
+            self.stack.pop(-2)
+        elif transition == "RA":
+            # right-arc transaction
+            self.dependencies.append((self.stack[-2], self.stack[-1]))
+            self.stack.pop(-1)
         ### END YOUR CODE
 
     def parse(self, transitions):
@@ -66,6 +81,17 @@ def minibatch_parse(sentences, model, batch_size):
     """
 
     ### YOUR CODE HERE
+    partial_parses = [PartialParse(sent) for sent in sentences]
+    unfinished_parses = [pp for pp in partial_parses]
+    while unfinished_parses:
+        mini_batch = unfinished_parses[:batch_size]
+        transitions = model.predict(mini_batch)
+        for idx, pp in enumerate(mini_batch):
+            pp.parse_step(transitions[idx])
+            # test if complete
+            if (len(pp.stack) == 1) and (len(pp.buffer) == 0):
+                unfinished_parses.remove(pp)
+    dependencies = [pp.dependencies for pp in partial_parses]
     ### END YOUR CODE
 
     return dependencies
