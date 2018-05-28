@@ -3,8 +3,10 @@
 ```
 ├── assignment1
 ├── assignment2
+├── assignment3
 │
 └── doc
     ├── assignment1
-    └── assignment2
+    ├── assignment2
+    └── assignment3
 ```
