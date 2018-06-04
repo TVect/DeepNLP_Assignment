@@ -111,7 +111,7 @@ class NERModel(Model):
 
             ### YOUR CODE HERE (2-3 lines)
             for inputs_minibatch in minibatches(train_examples, self.config.batch_size):
-                self.train_on_batch(sess, inputs_minibatch[0], inputs_minibatch[1])
+                self.train_on_batch(sess, *inputs_minibatch)
             ### END YOUR CODE
 
             logger.info("Evaluating on development data")
