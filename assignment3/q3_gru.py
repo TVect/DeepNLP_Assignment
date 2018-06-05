@@ -87,6 +87,8 @@ class SequencePredictor(Model):
 
         x = self.inputs_placeholder
         ### YOUR CODE HERE (~2-3 lines)
+        outputs, state = tf.nn.dynamic_rnn(cell, self.inputs_placeholder, dtype=tf.float32)
+        preds = tf.sigmoid(state, name="preds")
         ### END YOUR CODE
 
         return preds #state # preds
@@ -108,7 +110,8 @@ class SequencePredictor(Model):
         y = self.labels_placeholder
 
         ### YOUR CODE HERE (~1-2 lines)
-
+        loss = tf.nn.l2_loss(y - preds)
+        loss = tf.reduce_mean(loss, name="loss")
         ### END YOUR CODE
 
         return loss
@@ -142,7 +145,13 @@ class SequencePredictor(Model):
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.config.lr)
 
         ### YOUR CODE HERE (~6-10 lines)
-
+        grads_and_vars = optimizer.compute_gradients(loss)
+        grads, vars = zip(*grads_and_vars)
+        if self.config.clip_gradients:
+            grads = tf.clip_by_global_norm(grads, self.config.max_grad_norm)[0]
+            grads_and_vars = zip(grads, vars)
+        self.grad_norm = tf.global_norm(grads)
+        train_op = optimizer.apply_gradients(grads_and_vars)
         # - Remember to clip gradients only if self.config.clip_gradients
         # is True.
         # - Remember to set self.grad_norm
